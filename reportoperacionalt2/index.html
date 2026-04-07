@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Report Operacional SPA1 T2</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+:root {
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --surface2: #f7f8fa;
+  --border: #e0e0e0;
+  --text: #1a1a2e;
+  --text2: #555;
+  --text3: #888;
+  --accent: #1a73e8;
+  --accent-h: #1558b0;
+  --divider: #e0e0e0;
+  --input-bg: #fafafa;
+  --report-bg: #f8f8f8;
+  --report-border: #e0e0e0;
+}
+[data-theme="dark"] {
+  --bg: #0f1117;
+  --surface: #1e2028;
+  --surface2: #16181f;
+  --border: #2e3040;
+  --text: #e8eaf0;
+  --text2: #aab0c0;
+  --text3: #6b7280;
+  --accent: #4d8ef0;
+  --accent-h: #3a7de8;
+  --divider: #2a2d3a;
+  --input-bg: #12141a;
+  --report-bg: #12141a;
+  --report-border: #2a2d3a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: background 0.25s, color 0.25s; }
+
+/* HEADER */
+.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 13px 24px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.header-left h1 { font-size: 20px; font-weight: 700; }
+.header-left p { font-size: 13px; color: var(--text3); margin-top: 2px; }
+.header-right { display: flex; align-items: center; gap: 8px; }
+.analyst-name { font-size: 13px; font-weight: 600; color: var(--text3); }
+
+.btn { border: none; padding: 8px 15px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s, transform 0.1s; }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-h); }
+.btn-primary:disabled { background: #888; cursor: not-allowed; }
+.btn-theme { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); font-size: 17px; padding: 6px 11px; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
+.btn-theme:hover { background: var(--border); }
+
+/* TOAST */
+.toast { position: fixed; top: 18px; right: 18px; background: #25a244; color: #fff; padding: 11px 18px; border-radius: 9px; font-weight: 600; font-size: 14px; z-index: 9999; opacity: 0; pointer-events: none; transform: translateY(-8px); transition: opacity 0.3s, transform 0.3s; }
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* TABS */
+.tabs { display: flex; background: var(--surface); border-bottom: 2px solid var(--border); padding: 0 24px; overflow-x: auto; }
+.tab { padding: 13px 20px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text3); border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; white-space: nowrap; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab:hover:not(.active) { color: var(--text2); }
+
+/* PANELS */
+.panel { display: none; padding: 18px 24px 6px; max-width: 860px; margin: 0 auto; }
+.panel.active { display: block; }
+
+.sec-title { font-size: 12px; font-weight: 700; color: var(--text3); margin: 14px 0 9px; padding-bottom: 5px; border-bottom: 1.5px solid var(--divider); text-transform: uppercase; letter-spacing: 0.5px; }
+.card { background: var(--surface); border-radius: 10px; border: 1px solid var(--border); padding: 13px 15px; margin-bottom: 11px; transition: background 0.25s, border 0.25s; }
+.area-label { font-weight: 700; font-size: 13px; color: var(--text2); margin-bottom: 9px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 11px; }
+.row-resp { display: grid; grid-template-columns: 3fr 1fr; gap: 11px; align-items: end; }
+
+.fl { font-size: 11px; color: var(--text3); font-weight: 600; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+select, input[type="text"], input[type="number"] {
+  width: 100%; padding: 8px 11px; border: 1.5px solid var(--border); border-radius: 7px;
+  font-size: 14px; background: var(--input-bg); color: var(--text);
+  transition: border 0.2s, background 0.25s, color 0.25s;
+}
+select:focus, input:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+.divider { height: 1px; background: var(--divider); margin: 12px 0; }
+
+/* REPORTS — always visible */
+.reports-wrap { background: var(--surface2); border-top: 2px solid var(--divider); padding: 18px 24px 36px; margin-top: 6px; transition: background 0.25s; }
+.reports-inner { max-width: 860px; margin: 0 auto; }
+.reports-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.rc { background: var(--surface); border-radius: 10px; border: 1px solid var(--border); overflow: hidden; transition: background 0.25s, border 0.25s; }
+.rc-head { padding: 10px 13px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 13px; color: var(--text2); background: var(--surface2); transition: background 0.25s; }
+.rc-body { padding: 11px 13px; }
+textarea.rtext {
+  width: 100%; border: 1.5px solid var(--report-border); border-radius: 7px;
+  font-size: 12px; font-family: 'Courier New', monospace;
+  background: var(--report-bg); color: var(--text); padding: 9px 10px;
+  resize: vertical; min-height: 185px; transition: background 0.25s, color 0.25s, border 0.25s;
+}
+textarea.rtext:focus { outline: none; border-color: var(--accent); }
+.copy-btn { display: block; width: 100%; margin-top: 8px; padding: 10px; background: #25D366; color: #fff; border: none; border-radius: 7px; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.1s; }
+.copy-btn:hover { background: #1da84e; }
+.copy-btn:active { transform: scale(0.98); }
+.copy-btn.copied { background: var(--accent) !important; }
+
+@media (max-width: 680px) {
+  .reports-grid { grid-template-columns: 1fr; }
+  .row3 { grid-template-columns: 1fr 1fr; }
+  .row-resp { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
+<div class="header">
+  <div class="header-left">
+    <h1>📋 Report Operacional SPA1</h1>
+    <p>Analista: <strong>Ezequiel Miranda</strong></p>
+  </div>
+  <div class="header-right">
+    <span class="analyst-name">Ezequiel Miranda</span>
+    <button class="btn-theme" id="themeBtn" onclick="toggleTheme()" title="Alternar tema claro/escuro">🌙</button>
+    <button class="btn btn-primary" id="syncBtn" onclick="syncFromCloud()">🔄 Sincronizar</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('layout',this)">🏭 Layout</div>
+  <div class="tab" onclick="showTab('operacional',this)">👷 Operacional</div>
+  <div class="tab" onclick="showTab('presenca',this)">📝 Presença</div>
+</div>
+
+<!-- ABA LAYOUT -->
+<div id="tab-layout" class="panel active">
+  <div id="layout-areas"></div>
+</div>
+
+<!-- ABA OPERACIONAL -->
+<div id="tab-operacional" class="panel">
+  <div class="sec-title">Responsáveis e Status</div>
+  <div id="op-rows"></div>
+</div>
+
+<!-- ABA PRESENÇA -->
+<div id="tab-presenca" class="panel">
+  <div class="sec-title">Dados de PSs</div>
+  <div class="card">
+    <div class="row2">
+      <div><label class="fl">✅ PSs Presentes</label><input type="number" id="pss_p" value="0" oninput="save('pss_p')"></div>
+      <div><label class="fl">✅ PSs de Folga</label><input type="number" id="pss_f" value="0" oninput="save('pss_f')"></div>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="sec-title">Dados Gerais</div>
+  <div class="card"><div class="row3" id="presenca-grid"></div></div>
+</div>
+
+<!-- RELATÓRIOS — sempre visível abaixo das abas -->
+<div class="reports-wrap">
+  <div class="reports-inner">
+    <div class="sec-title">🚀 Gerar Relatórios</div>
+    <div class="reports-grid">
+      <div class="rc">
+        <div class="rc-head">1. Layout</div>
+        <div class="rc-body">
+          <textarea class="rtext" id="txt_layout" readonly></textarea>
+          <button class="copy-btn" onclick="copyText('txt_layout',this)">COPIAR LAYOUT 📲</button>
+        </div>
+      </div>
+      <div class="rc">
+        <div class="rc-head">2. Operacional</div>
+        <div class="rc-body">
+          <textarea class="rtext" id="txt_operacional" readonly></textarea>
+          <button class="copy-btn" onclick="copyText('txt_operacional',this)">COPIAR OPERACIONAL 📲</button>
+        </div>
+      </div>
+      <div class="rc">
+        <div class="rc-head">3. Presença</div>
+        <div class="rc-body">
+          <textarea class="rtext" id="txt_presenca" readonly></textarea>
+          <button class="copy-btn" onclick="copyText('txt_presenca',this)">COPIAR PRESENÇA 📲</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- FIREBASE ----
+firebase.initializeApp({ databaseURL: "https://hhinventario-default-rtdb.firebaseio.com" });
+var dbRef = firebase.database().ref("reports/atual");
+
+// ---- STATE ----
+var formData = {};
+
+// ---- THEME ----
+function toggleTheme() {
+  var html = document.documentElement;
+  var dark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', dark ? 'light' : 'dark');
+  document.getElementById('themeBtn').textContent = dark ? '🌙' : '☀️';
+  localStorage.setItem('spa1_theme', dark ? 'light' : 'dark');
+}
+(function(){
+  var t = localStorage.getItem('spa1_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', t);
+  window.addEventListener('DOMContentLoaded', function(){
+    document.getElementById('themeBtn').textContent = t === 'dark' ? '☀️' : '🌙';
+  });
+})();
+
+// ---- HELPERS ----
+var statusOpts = [{v:'🔴',l:'🔴 Não iniciado'},{v:'🟡',l:'🟡 Em andamento'},{v:'🟢',l:'🟢 Finalizado'}];
+function makeSelect(id, val, onch) {
+  var s = document.createElement('select'); s.id = id;
+  s.onchange = onch;
+  statusOpts.forEach(function(o){
+    var opt = document.createElement('option'); opt.value = o.v; opt.textContent = o.l;
+    if (o.v === (val || '🟡')) opt.selected = true;
+    s.appendChild(opt);
+  });
+  return s;
+}
+function mkLabel(txt) { var l = document.createElement('label'); l.className = 'fl'; l.textContent = txt; return l; }
+
+// ---- BUILD LAYOUT ----
+var layoutAreas = [['gx','Gaiolas XPT'],['vx','Volumoso XPT'],['gs','Gaiolas SVC'],['vs','Volumoso SVC'],['go','Goleiro']];
+function buildLayout() {
+  var cont = document.getElementById('layout-areas'); cont.innerHTML = '';
+  layoutAreas.forEach(function(a){
+    var k=a[0], lbl=a[1];
+    var card=document.createElement('div'); card.className='card';
+    var al=document.createElement('div'); al.className='area-label'; al.textContent=lbl;
+    var row=document.createElement('div'); row.className='row2';
+    var d1=document.createElement('div'), d2=document.createElement('div');
+    d1.appendChild(mkLabel('Org. Ruas'));
+    d1.appendChild(makeSelect(k+'_o', formData[k+'_o'], (function(key){return function(){save(key);};})(k+'_o')));
+    d2.appendChild(mkLabel('Etiq. QRs'));
+    d2.appendChild(makeSelect(k+'_q', formData[k+'_q'], (function(key){return function(){save(key);};})(k+'_q')));
+    row.appendChild(d1); row.appendChild(d2);
+    card.appendChild(al); card.appendChild(row); cont.appendChild(card);
+  });
+}
+
+// ---- BUILD OPERACIONAL ----
+var opRows = [
+  ['d','Devolução XPT','Luis Felipe'],['s','Sem Identificação','Dharlyson'],
+  ['a','Avarias','Ney'],['e','Etiquetagem / Montagem de HU Reversa','Ney'],
+  ['b','Tratativas Backlog Pacotinho / Volumoso','Ney'],['r','Retorno Estação','Ney / Rauan'],
+  ['inv','Inventário','']
+];
+function buildOperacional() {
+  var cont = document.getElementById('op-rows'); cont.innerHTML = '';
+  opRows.forEach(function(op){
+    var k=op[0], lbl=op[1], def=op[2];
+    var card=document.createElement('div'); card.className='card';
+    var row=document.createElement('div'); row.className='row-resp';
+    var dn=document.createElement('div'), ds=document.createElement('div');
+    var inp=document.createElement('input'); inp.type='text'; inp.id=k+'_n';
+    inp.placeholder=def; inp.value=formData[k+'_n']||'';
+    inp.oninput=(function(key){return function(){save(key);};})(k+'_n');
+    dn.appendChild(mkLabel(lbl)); dn.appendChild(inp);
+    ds.appendChild(mkLabel('Status'));
+    ds.appendChild(makeSelect(k+'_s', formData[k+'_s']||'🟡', (function(key){return function(){save(key);};})(k+'_s')));
+    row.appendChild(dn); row.appendChild(ds); card.appendChild(row); cont.appendChild(card);
+  });
+}
+
+// ---- BUILD PRESENÇA ----
+var presFields = [['p1','Presentes (Log)',50],['p2','Diaristas Sol.',12],['p3','Diaristas Pres.',12],
+  ['p4','Atestados',1],['p5','Faltas',8],['p6','Pulmão',1],['p7','Folgas',8],['p8','Suspensões',0]];
+function buildPresenca() {
+  var g = document.getElementById('presenca-grid'); g.innerHTML = '';
+  presFields.forEach(function(c){
+    var k=c[0], lbl=c[1], def=c[2];
+    var d=document.createElement('div');
+    var inp=document.createElement('input'); inp.type='number'; inp.id=k;
+    inp.value = formData[k] !== undefined ? formData[k] : def;
+    inp.oninput=(function(key){return function(){save(key);};})(k);
+    d.appendChild(mkLabel(lbl)); d.appendChild(inp); g.appendChild(d);
+  });
+}
+
+// ---- TABS ----
+function showTab(name, el) {
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.getElementById('tab-'+name).classList.add('active');
+  el.classList.add('active');
+}
+
+// ---- SAVE ----
+var saveTimers = {};
+function save(key) {
+  var el = document.getElementById(key); if (!el) return;
+  formData[key] = el.value;
+  generateReports();
+  clearTimeout(saveTimers[key]);
+  saveTimers[key] = setTimeout(function(){ dbRef.update(formData); }, 600);
+}
+
+// ---- LOAD DATA ----
+function getDefault(k){ var d={pss_p:0,pss_f:0,p1:50,p2:12,p3:12,p4:1,p5:8,p6:1,p7:8,p8:0}; return d[k]!==undefined?d[k]:0; }
+function loadData(data) {
+  if (!data) return;
+  formData = JSON.parse(JSON.stringify(data));
+  buildLayout(); buildOperacional(); buildPresenca();
+  ['pss_p','pss_f'].forEach(function(k){
+    var el=document.getElementById(k);
+    if(el) el.value = data[k]!==undefined ? data[k] : 0;
+  });
+  generateReports();
+}
+
+// ---- SYNC ----
+function syncFromCloud() {
+  var btn = document.getElementById('syncBtn');
+  btn.disabled=true; btn.textContent='⏳ Sincronizando...';
+  dbRef.once('value').then(function(snap){
+    var d=snap.val();
+    if(d){loadData(d); showToast('☁️ Sincronizado com sucesso! ✅');}
+    else { showToast('⚠️ Nenhum dado na nuvem.'); }
+    btn.disabled=false; btn.textContent='🔄 Sincronizar';
+  }).catch(function(){ showToast('❌ Erro ao sincronizar.'); btn.disabled=false; btn.textContent='🔄 Sincronizar'; });
+}
+
+// ---- TOAST ----
+function showToast(msg) {
+  var t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+// ---- REPORTS ----
+function gv(k, def) { var v=formData[k]; return (v!==undefined&&v!==null&&v!=='') ? v : (def!==undefined?def:''); }
+function generateReports() {
+  var hoje = new Date().toLocaleDateString('pt-BR');
+  document.getElementById('txt_layout').value =
+    "*Status Layout*\n🔴 Não iniciado | 🟡 Em andamento | 🟢 Finalizado\n\n" +
+    "Gaiolas XPT: "+gv('gx_o','🟡')+" Org. Ruas | "+gv('gx_q','🟡')+" QRs\n" +
+    "Volumoso XPT: "+gv('vx_o','🟡')+" Org. Ruas | "+gv('vx_q','🟡')+" QRs\n" +
+    "Gaiolas SVC: "+gv('gs_o','🟡')+" Org. Ruas | "+gv('gs_q','🟡')+" QRs\n" +
+    "Volumoso SVC: "+gv('vs_o','🟡')+" Org. Ruas | "+gv('vs_q','🟡')+" QRs\n" +
+    "Goleiro: "+gv('go_o','🟡')+" Org. Ruas | "+gv('go_q','🟡')+" QRs";
+
+  document.getElementById('txt_operacional').value =
+    "*REPORT OPERACIONAL DE PSs T2 - Demandas (6 PSs)*\n📅 Data: "+hoje+"\n" +
+    "🔹 Devolução XPT: "+gv('d_n','Luis Felipe')+" "+gv('d_s','')+"\n" +
+    "🔹 Etiquetagem / Montagem de HU Reversa: "+gv('e_n','Ney')+" "+gv('e_s','')+"\n" +
+    "🔹 Avarias: "+gv('a_n','Ney')+" "+gv('a_s','')+"\n" +
+    "🔹 RTS: "+gv('r_n','Ney/Rauan')+" "+gv('r_s','')+"\n" +
+    "🔹 Sem Identificação: "+gv('s_n','Dharlyson')+" "+gv('s_s','')+"\n" +
+    "🔹 Tratativas Backlog Pacotinho / Volumoso: "+gv('b_n','Ney')+" "+gv('b_s','')+"\n" +
+    "🔹 Inventário: "+gv('inv_n','')+" "+gv('inv_s','');
+
+  document.getElementById('txt_presenca').value =
+    "*RESUMO DE PRESENÇA*\n" +
+    "✅ PSs Presentes: "+gv('pss_p',0)+"\n" +
+    "✅ PSs de Folga: "+gv('pss_f',0)+"\n" +
+    "✅ Log: "+gv('p1',50)+" | ✅ Diaristas: "+gv('p3',12)+"/"+gv('p2',12)+"\n" +
+    "📄 Atestados: "+gv('p4',1)+" | ❌ Faltas: "+gv('p5',8)+"\n" +
+    "🫁 Pulmão: "+gv('p6',1)+" | 🛌 Folgas: "+gv('p7',8)+"\n" +
+    "⚠ Suspensões: "+gv('p8',0);
+}
+
+// ---- COPY ----
+function copyText(id, btn) {
+  var txt=document.getElementById(id).value, orig=btn.textContent;
+  navigator.clipboard.writeText(txt).then(function(){
+    btn.textContent='COPIADO! ✅'; btn.classList.add('copied');
+    setTimeout(function(){ btn.textContent=orig; btn.classList.remove('copied'); }, 2200);
+  }).catch(function(){ document.getElementById(id).select(); document.execCommand('copy'); showToast('Copiado! ✅'); });
+}
+
+// ---- INIT ----
+buildLayout(); buildOperacional(); buildPresenca(); generateReports();
+dbRef.on('value', function(snap){ var d=snap.val(); if(d) loadData(d); });
+</script>
+</body>
+</html>
